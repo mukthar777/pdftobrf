@@ -16,7 +16,7 @@ def text_to_braille(input_text, table="ml-in-g1.utb"):
 # Main function remains unchanged
 
 def main():
-    string = "Hello,world"
+    string = "abc"
     braille_string = text_to_braille(string)
     print(braille_string)
 
