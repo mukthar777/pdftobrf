@@ -1,83 +1,55 @@
-# from pynput import keyboard
+import pynput.keyboard
+import threading
 
-# # Mapping of keys to Braille dots
-# braille_mapping = {
-#     'a': 0b100000,  # Dot 1
-#     's': 0b010000,  # Dot 2
-#     'd': 0b001000,  # Dot 3
-#     'f': 0b000100,  # Dot 4
-#     'j': 0b000010,  # Dot 5
-#     'k': 0b000001   # Dot 6
-# }
-
-# # Function to convert binary representation to Unicode Braille character
-# def binary_to_braille(binary):
-#     return chr(0x2800 + binary)
-
-# # Store currently pressed keys
-# current_keys = set()
-
-# def on_press(key):
-#     try:
-#         if key.char in braille_mapping:
-#             current_keys.add(key.char)
-#             # Calculate the combined braille representation
-#             braille_value = sum(braille_mapping[k] for k in current_keys)
-#             print("Current Braille:", binary_to_braille(braille_value))
-#     except AttributeError:
-#         pass
-
-# def on_release(key):
-#     try:
-#         if key.char in braille_mapping:
-#             current_keys.discard(key.char)
-#     except AttributeError:
-#         pass
-
-# # Start listening for key events
-# with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-#     listener.join()
-
-
-from pynput import keyboard
-
-# Mapping of keys to Braille dots
-braille_mapping = {
-    'f': 0b000001,  # Dot 1
-    'd': 0b000010,  # Dot 2
-    's': 0b000100,  # Dot 3
-    'j': 0b001000,  # Dot 4
-    'k': 0b010000,  # Dot 5
-    'l': 0b100000   # Dot 6
+# Mapping of keys to their respective Braille dots (bits 0-5)
+key_to_dot = {
+    'f': 0b00000001,  # Dot 1
+    'd': 0b00000010,  # Dot 2
+    's': 0b00000100,  # Dot 3
+    'j': 0b00001000,  # Dot 4
+    'k': 0b00010000,  # Dot 5
+    'l': 0b00100000,  # Dot 6
 }
 
-# Function to convert binary representation to Unicode Braille character
-def binary_to_braille(binary):
-    return chr(0x2800 + binary)
+# Global variables to track the current Braille code and timer
+current_code = 0
+timer = None
+threshold = 0.1  # 100 milliseconds delay threshold
+lock = threading.Lock()
 
-# Store currently pressed keys
-current_keys = set()
+def process_braille():
+    """Process the accumulated Braille code and print the corresponding character."""
+    global current_code, timer
+    with lock:
+        if current_code != 0:
+            # Calculate the Unicode Braille character
+            braille_char = chr(0x2800 + current_code)
+            print(braille_char, end='', flush=True)
+            current_code = 0  # Reset the code
+        timer = None
 
 def on_press(key):
+    """Handle key press events, updating the current Braille code and managing the timer."""
+    global current_code, timer
     try:
-        # Check if the pressed key corresponds to one of the Braille dots
-        if hasattr(key, 'char') and key.char in braille_mapping:
-            current_keys.add(key.char)
-            # Calculate the combined Braille representation
-            braille_value = sum(braille_mapping[k] for k in current_keys)
-            # Print only the Braille dots as a Unicode character
-            print(binary_to_braille(braille_value), end='', flush=True)
+        # Convert the key to lowercase to handle case insensitivity
+        char = key.char.lower()
     except AttributeError:
-        pass
+        # Ignore non-character keys
+        return
+    if char not in key_to_dot:
+        return  # Skip irrelevant keys
 
-def on_release(key):
-    try:
-        # Remove the key from the pressed keys set when released
-        if hasattr(key, 'char') and key.char in braille_mapping:
-            current_keys.discard(key.char)
-    except AttributeError:
-        pass
+    with lock:
+        # Cancel the existing timer if it's active
+        if timer is not None:
+            timer.cancel()
+        # Update the current Braille code with the new dot
+        current_code |= key_to_dot[char]
+        # Start a new timer to process the Braille code after the threshold delay
+        timer = threading.Timer(threshold, process_braille)
+        timer.start()
 
-# Start listening for key events
-with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+# Start listening for key presses
+with pynput.keyboard.Listener(on_press=on_press) as listener:
     listener.join()
