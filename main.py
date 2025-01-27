@@ -11,12 +11,25 @@ def upload_pdf():
         text_window.delete("1.0", tk.END)
         text_window.insert(tk.END, file_path)
 
+
 def convert_to_braille():
     file_path = text_window.get("1.0", tk.END).strip()
     if file_path:
         try:
             # Simulated PDF-to-text and text-to-Braille conversion
-            extracted_text = pdf_to_text(file_path) # Replace with pdf_to_text(file_path)
+            extracted_text = file_path  # Replace with pdf_to_text(file_path)
+            braille_text = text_to_braille(extracted_text)
+            braille_window.delete("1.0", tk.END)
+            braille_window.insert(tk.END, braille_text)
+            messagebox.showinfo("Conversion Complete", "Braille Output displayed below.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to convert: {e}")
+            
+    file_path = text_window.get("1.0", tk.END).strip()
+    if file_path:
+        try:
+            # Simulated PDF-to-text and text-to-Braille conversion
+            extracted_text = pdf_to_text(file_path)# Replace with pdf_to_text(file_path)
             print(extracted_text)
             braille_text = text_to_braille(extracted_text)
             braille_window.delete("1.0", tk.END)
@@ -65,7 +78,7 @@ def download_brf():
 # Create the main window
 root = tk.Tk()
 root.title("PDF to Braille Converter")
-root.geometry("600x650")
+root.geometry("1200x1350")
 root.configure(bg="#e6f7ff")
 
 # Set up fonts and colors
